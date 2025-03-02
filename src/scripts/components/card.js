@@ -1,3 +1,5 @@
+import { likeCard, unlikeCard } from './api';
+
 export function createCard(name, link, deleteHandler, likeHandler, openImagePopup, cardData, userId) {
   const cardTemplate = document.querySelector('#card-template').content;
   const placesItem = cardTemplate.querySelector('.places__item').cloneNode(true);
@@ -26,4 +28,14 @@ export function createCard(name, link, deleteHandler, likeHandler, openImagePopu
 
 export function deleteCard(cardElement) {
   cardElement.remove();
+}
+
+export function toggleLike(likeButton, cardId, likeCount) {
+  const isLiked = likeButton.classList.contains('card__like-button_is-active');
+  (isLiked ? unlikeCard(cardId) : likeCard(cardId))
+    .then((cardData) => {
+      likeButton.classList.toggle('card__like-button_is-active');
+      likeCount.textContent = cardData.likes.length;
+    })
+    .catch((err) => console.log(err));
 }

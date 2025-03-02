@@ -1,8 +1,8 @@
 import '../pages/index.css';
-import { createCard, deleteCard } from './components/card';
+import { createCard, deleteCard, toggleLike } from './components/card';
 import { openModal, closeModal, setCloseListeners } from './components/modal';
 import { enableValidation, clearValidation } from './components/validation';
-import { getUserInfo, getInitialCards, updateUserInfo, addCard, deleteCardFromServer, likeCard, unlikeCard, updateAvatar } from './components/api';
+import { getUserInfo, getInitialCards, updateUserInfo, addCard, deleteCardFromServer, updateAvatar } from './components/api';
 
 import logoImage from '../images/logo.svg';
 
@@ -11,7 +11,7 @@ const profileImageElement = document.querySelector('.profile__image');
 const logoElement = document.querySelector('.logo');
 const editButton = document.querySelector('.profile__edit-button');
 const addButton = document.querySelector('.profile__add-button');
-const avatarEditButton = document.querySelector('.profile__avatar-edit-button');
+const avatarEditContainer = document.querySelector('.profile__image-container');
 const profileTitle = document.querySelector('.profile__title');
 const profileDescription = document.querySelector('.profile__description');
 const editPopup = document.querySelector('#edit-profile-popup');
@@ -39,6 +39,7 @@ const validationConfig = {
 };
 
 let userId;
+let isCardsLoaded = false;
 
 function openImagePopup(name, link) {
   const popupImage = imagePopup.querySelector('.popup__image');
@@ -47,16 +48,6 @@ function openImagePopup(name, link) {
   popupImage.alt = name;
   popupCaption.textContent = name;
   openModal(imagePopup);
-}
-
-function toggleLike(likeButton, cardId, likeCount) {
-  const isLiked = likeButton.classList.contains('card__like-button_is-active');
-  (isLiked ? unlikeCard(cardId) : likeCard(cardId))
-    .then((cardData) => {
-      likeButton.classList.toggle('card__like-button_is-active');
-      likeCount.textContent = cardData.likes.length;
-    })
-    .catch((err) => console.log(err));
 }
 
 function handleDeleteCard(cardElement, cardId) {
@@ -98,7 +89,6 @@ function handleAddFormSubmit(evt) {
       placesList.prepend(newCard);
       closeModal(addPopup);
       addFormElement.reset();
-      clearValidation(addFormElement, validationConfig);
     })
     .catch((err) => console.log(err))
     .finally(() => {
@@ -107,20 +97,23 @@ function handleAddFormSubmit(evt) {
     });
 }
 
-Promise.all([getUserInfo(), getInitialCards()])
-  .then(([userData, cardsData]) => {
-    userId = userData._id;
-    profileTitle.textContent = userData.name;
-    profileDescription.textContent = userData.about;
-    profileImageElement.style.backgroundImage = `url(${userData.avatar})`;
-    logoElement.src = logoImage;
+if (!isCardsLoaded) {
+  Promise.all([getUserInfo(), getInitialCards()])
+    .then(([userData, cardsData]) => {
+      userId = userData._id;
+      profileTitle.textContent = userData.name;
+      profileDescription.textContent = userData.about;
+      profileImageElement.style.backgroundImage = `url(${userData.avatar})`;
+      logoElement.src = logoImage;
 
-    cardsData.forEach((cardData) => {
-      const card = createCard(cardData.name, cardData.link, handleDeleteCard, toggleLike, openImagePopup, cardData, userId);
-      placesList.append(card);
-    });
-  })
-  .catch((err) => console.log(err));
+      cardsData.forEach((cardData) => {
+        const card = createCard(cardData.name, cardData.link, handleDeleteCard, toggleLike, openImagePopup, cardData, userId);
+        placesList.append(card);
+      });
+      isCardsLoaded = true;
+    })
+    .catch((err) => console.log(err));
+}
 
 editButton.addEventListener('click', () => {
   nameInput.value = profileTitle.textContent;
@@ -134,7 +127,7 @@ addButton.addEventListener('click', () => {
   openModal(addPopup);
 });
 
-avatarEditButton.addEventListener('click', () => {
+avatarEditContainer.addEventListener('click', () => {
   clearValidation(avatarFormElement, validationConfig);
   openModal(avatarPopup);
 });
@@ -152,7 +145,6 @@ avatarFormElement.addEventListener('submit', (evt) => {
       profileImageElement.style.backgroundImage = `url(${userData.avatar})`;
       closeModal(avatarPopup);
       avatarFormElement.reset();
-      clearValidation(avatarFormElement, validationConfig);
     })
     .catch((err) => console.log(err))
     .finally(() => submitButton.textContent = 'Сохранить');
